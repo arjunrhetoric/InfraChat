@@ -11,7 +11,7 @@ const getIO = () => ioInstance;
 const initializeSocket = (httpServer) => {
   const io = new Server(httpServer, {
     cors: {
-      origin: ['https://infra-chat-sudo1.vercel.app/login'],
+      origin: ['https://infra-chat-sudo1.vercel.app'],
       methods: ['GET', 'POST'],
       credentials: true,
     },
