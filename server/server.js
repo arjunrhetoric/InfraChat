@@ -26,12 +26,18 @@ const server = http.createServer(app);
 connectDB();
  // Add this at the top with other requires
 
+const path = require("path");
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+
 // Logic to create the uploads folder if it doesn't exist
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
     console.log('📁 Created uploads directory');
 }
+
 
 
 // Middlewares
