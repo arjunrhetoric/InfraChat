@@ -18,8 +18,10 @@ router.post('/', auth, (req, res) => {
       return res.status(400).json({ message: 'No file provided.' });
     }
 
+    const backendBaseUrl = "https://infrachat-gemh.onrender.com";
+
     const file = {
-      url: `/uploads/${req.file.filename}`,
+      url: `${backendBaseUrl}/uploads/${req.file.filename}`,
       name: req.file.originalname,
       size: req.file.size,
       type: req.file.mimetype,
