@@ -16,7 +16,7 @@ const directMessageRoutes = require('./routes/directMessages');
 const directMessageActionRoutes = require('./routes/directMessageActions');
 const userRoutes = require('./routes/users');
 const uploadRoutes = require('./routes/upload');
-
+const fs = require('fs');
 
 
 const app = express();
@@ -24,14 +24,22 @@ const server = http.createServer(app);
 
 // Connect database
 connectDB();
+ // Add this at the top with other requires
+
+// Logic to create the uploads folder if it doesn't exist
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+    console.log('📁 Created uploads directory');
+}
+
 
 // Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 
 // Health route
