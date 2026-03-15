@@ -3,7 +3,7 @@ import api from "../services/api";
 import { formatMessageTime } from "../utils/time";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const API_BASE = "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_URL;
 
 function formatFileSize(bytes) {
   if (!bytes) return "";
