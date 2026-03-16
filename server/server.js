@@ -24,12 +24,6 @@ const server = http.createServer(app);
 
 // Connect database
 connectDB();
- // Add this at the top with other requires
-
-const path = require("path");
-
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
-
 
 // Logic to create the uploads folder if it doesn't exist
 const uploadDir = path.join(__dirname, 'uploads');
@@ -38,7 +32,7 @@ if (!fs.existsSync(uploadDir)) {
     console.log('📁 Created uploads directory');
 }
 
-
+app.use("/uploads", express.static(uploadDir));
 
 // Middlewares
 app.use(cors());
