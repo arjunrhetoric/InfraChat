@@ -1,9 +1,29 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["NODE_ENV"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "DATABASE_URL",
+        "AUTH_SECRET",
+        "AUTH_URL",
+        "PUSHER_APP_ID",
+        "PUSHER_KEY",
+        "PUSHER_SECRET",
+        "PUSHER_CLUSTER",
+        "NEXT_PUBLIC_PUSHER_KEY",
+        "NEXT_PUBLIC_PUSHER_CLUSTER",
+        "NEXT_PUBLIC_APP_URL",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+        "BLOB_READ_WRITE_TOKEN",
+        "UPSTASH_REDIS_REST_URL",
+        "UPSTASH_REDIS_REST_TOKEN"
+      ]
     },
     "dev": {
       "cache": false,
