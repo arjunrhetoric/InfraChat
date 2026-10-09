@@ -1,0 +1,26 @@
+{
+  "name": "infrachat",
+  "private": true,
+  "version": "2.0.0",
+  "packageManager": "npm@10.9.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "npm run db:migrate --workspace=@infrachat/db",
+    "db:push": "npm run db:push --workspace=@infrachat/db"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.4",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

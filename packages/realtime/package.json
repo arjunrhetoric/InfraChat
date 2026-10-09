@@ -1,0 +1,20 @@
+{
+  "name": "@infrachat/realtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "echo \"realtime package: no dev server\"",
+    "lint": "echo \"realtime package: no lint\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "pusher": "^5.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

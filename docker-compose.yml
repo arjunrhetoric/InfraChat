@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: infrachat-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: infrachat
+      POSTGRES_PASSWORD: infrachat
+      POSTGRES_DB: infrachat
+    ports:
+      - "5432:5432"
+    volumes:
+      - infrachat-pgdata:/var/lib/postgresql/data
+
+volumes:
+  infrachat-pgdata:

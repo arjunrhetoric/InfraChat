@@ -1,0 +1,254 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum RoomType {
+  public
+  private
+  broadcast
+}
+
+enum MessageType {
+  text
+  system
+  command
+}
+
+enum AuditAction {
+  USER_KICKED
+  USER_BANNED
+  USER_UNBANNED
+  USER_MUTED
+  USER_UNMUTED
+  USER_PROMOTED
+  USER_DEMOTED
+  ROOM_CREATED
+  ROOM_DELETED
+  ROOM_ARCHIVED
+  ROOM_UNARCHIVED
+  ROOM_ANNOUNCEMENT
+  MESSAGE_DELETED
+  ROOM_MEMBER_ADDED
+  ROOM_MEMBER_REMOVED
+}
+
+// ---------- Core models (ported from Mongoose) ----------
+
+model User {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String? // nullable: OAuth users have no password
+  // 1 = Member, 2 = Moderator, 3 = SuperAdmin (kept as Int for parity + hierarchy math)
+  role         Int       @default(1)
+  isBanned     Boolean   @default(false)
+  isMuted      Boolean   @default(false)
+  mutedUntil   DateTime?
+  avatar       String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  roomsCreated     Room[]             @relation("RoomCreator")
+  memberships      RoomMember[]
+  roomBans         RoomBan[]
+  announcementsSet Room[]             @relation("AnnouncementAuthor")
+  messages         Message[]
+  dmsSent          DirectMessage[]    @relation("DmSender")
+  dmsReceived      DirectMessage[]    @relation("DmRecipient")
+  auditsPerformed  AuditLog[]         @relation("AuditActor")
+  auditsTargeted   AuditLog[]         @relation("AuditTarget")
+  accounts         Account[]
+  sessions         Session[]
+
+  @@index([role])
+  @@map("users")
+}
+
+model Room {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  description     String    @default("") @db.VarChar(200)
+  createdById     String
+  createdBy       User      @relation("RoomCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  isPrivate       Boolean   @default(false)
+  roomType        RoomType  @default(public)
+  isArchived      Boolean   @default(false)
+  announcementText String   @default("") @db.VarChar(2000)
+  announcementById String?
+  announcementBy   User?     @relation("AnnouncementAuthor", fields: [announcementById], references: [id], onDelete: SetNull)
+  announcementAt   DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  members  RoomMember[]
+  bans     RoomBan[]
+  messages Message[]
+  auditLogs AuditLog[]
+
+  @@index([createdById])
+  @@index([roomType])
+  @@map("rooms")
+}
+
+// Explicit join: lets us track room-level moderator flag (replaces moderators[] array).
+model RoomMember {
+  roomId       String
+  userId       String
+  isModerator  Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  room         Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, userId])
+  @@index([userId])
+  @@map("room_members")
+}
+
+model RoomBan {
+  roomId    String
+  userId    String
+  createdAt DateTime @default(now())
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, userId])
+  @@index([userId])
+  @@map("room_bans")
+}
+
+model Message {
+  id                 String      @id @default(cuid())
+  // FIX (gap #2): DB allows "" — API layer enforces content OR attachments via Zod.
+  content            String      @default("") @db.VarChar(2000)
+  senderId           String
+  sender             User        @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  roomId             String
+  room               Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  type               MessageType @default(text)
+  edited             Boolean     @default(false)
+  editedAt           DateTime?
+  deletedForEveryone Boolean     @default(false)
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  attachments MessageAttachment[]
+
+  @@index([roomId, createdAt(sort: Desc)])
+  @@index([senderId, createdAt(sort: Desc)])
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id        String  @id @default(cuid())
+  messageId String
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  url       String
+  name      String
+  size      Int?
+  mime      String?
+
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+model DirectMessage {
+  id                 String   @id @default(cuid())
+  content            String   @default("") @db.VarChar(2000)
+  senderId           String
+  sender             User     @relation("DmSender", fields: [senderId], references: [id], onDelete: Restrict)
+  recipientId        String
+  recipient          User     @relation("DmRecipient", fields: [recipientId], references: [id], onDelete: Restrict)
+  edited             Boolean  @default(false)
+  editedAt           DateTime?
+  deletedForEveryone Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  attachments DirectMessageAttachment[]
+
+  @@index([senderId, recipientId, createdAt(sort: Desc)])
+  @@index([recipientId, senderId, createdAt(sort: Desc)])
+  @@map("direct_messages")
+}
+
+model DirectMessageAttachment {
+  id              String        @id @default(cuid())
+  directMessageId String
+  directMessage   DirectMessage @relation(fields: [directMessageId], references: [id], onDelete: Cascade)
+  url             String
+  name            String
+  size            Int?
+  mime            String?
+
+  @@index([directMessageId])
+  @@map("direct_message_attachments")
+}
+
+// Append-only by convention: NO update/delete routes expose this model.
+// Only INSERT + SELECT. Enforced in code review + no Prisma update/delete calls.
+model AuditLog {
+  id            String      @id @default(cuid())
+  action        AuditAction
+  performedById String
+  performedBy   User        @relation("AuditActor", fields: [performedById], references: [id], onDelete: Restrict)
+  targetUserId  String?
+  targetUser    User?       @relation("AuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  roomId        String?
+  room          Room?       @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  details       String      @default("") @db.VarChar(500)
+  metadata      Json        @default("{}")
+  createdAt     DateTime    @default(now())
+
+  @@index([performedById, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@index([roomId, createdAt(sort: Desc)])
+  @@index([targetUserId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+// ---------- Auth.js (NextAuth v5) tables ----------
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

@@ -1,0 +1,24 @@
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx prisma generate --schema=packages/db/prisma/schema.prisma
+      - run: npm run typecheck --workspace=@infrachat/db
+      - run: npm run typecheck --workspace=@infrachat/realtime
+      - run: npm run typecheck --workspace=@infrachat/web
+      - run: npm run build --workspace=@infrachat/web
+        env:
+          DATABASE_URL: postgresql://user:pass@localhost:5432/db?schema=public
+          AUTH_SECRET: ci-placeholder-secret-32-chars-minimum
+          NEXT_PUBLIC_PUSHER_KEY: ci
+          NEXT_PUBLIC_PUSHER_CLUSTER: ap2
